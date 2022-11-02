@@ -20,7 +20,7 @@ end
 md"""#### Set up and do a little testing on loading an XML Syntax file"""
 
 # ╔═╡ e9c18ab6-a578-419e-a4ee-cd580e462190
-iliadTBString = read("treebanks/tlg0012.tlg001.perseus-grc1_1.tb.xml", String)
+iliadTBString = read("treebanks/iliad_all.xml", String)
 
 # ╔═╡ d622a77c-e757-4fc6-ae9f-8bcede5a8b79
 iliadXML = parsexml(iliadTBString)
@@ -94,15 +94,24 @@ begin
 	posNum = 1
 	personNum = 2
 	numberNum = 3
-	voiceNum = 4
+	tenseNum = 4
 	moodNum = 5
-	tenseNum = 6
+	voiceNum = 6
 	genderNum = 7
 	caseNum = 8
 	degreeNum = 9
 
 	nothing
 end
+
+# ╔═╡ 6f551698-630e-4145-ac9e-4ef4f01872ad
+md""" ### Morphology Struct
+"""
+
+# ╔═╡ 92844bb9-7a2e-4e43-920c-942ec9ccede8
+md"""
+We make a Struct for morphology, with default value as `emptyMorphRecord`, since no form is going to have *all* properties.
+"""
 
 # ╔═╡ 701abf20-ca37-443c-99e6-6b06368fc8db
 Base.@kwdef mutable struct Morphology
@@ -117,8 +126,62 @@ Base.@kwdef mutable struct Morphology
 	degreeMorphRecord = emptyMorphRecord
 end
 
+# ╔═╡ 4d5bd156-1c82-4be2-bbff-06a82a03b9d2
+md"""### Serialization Functions"""
+
+# ╔═╡ 708af3d9-64fd-440c-9e21-68b11bccb6e2
+begin
+	
+	import Base.string
+
+	function posTag(mr::MorphRecord)
+		if (mr.posTag == "")
+			"-"
+		else
+			mr.posTag
+		end
+	end
+
+	function string(mr::MorphRecord)
+		if (mr.long == "")
+			""
+		else
+			mr.long
+		end
+	end
+
+	
+	function string(m::Morphology)
+		mvs = [string(m.pos), string(m.person), string(m.number), string(m.voice), string(m.mood), string(m.tense), string(m.gender), string(m.grammaticalCase), string(m.degreeMorphRecord)]
+
+		noblanks = filter(mvs) do s
+			length(s) > 0
+		end
+
+
+		join(noblanks, ", ")
+		
+	end
+
+	function posTag(m::Morphology)
+		mvs = [posTag(m.pos), posTag(m.person), posTag(m.number), posTag(m.voice), posTag(m.mood), posTag(m.tense), posTag(m.gender), posTag(m.grammaticalCase), posTag(m.degreeMorphRecord)]
+
+		join(mvs)
+
+	end
+	
+end
+
+# ╔═╡ e469bce0-ee49-4d90-9ea1-3c4038d5a45b
+join(["a", "b", "c", "d"], ", ")
+
 # ╔═╡ 7c324144-b406-45e0-9cb4-288b7f46ab05
-md"""Let's test our Struct!"""
+md"""### Let's test our Struct!"""
+
+# ╔═╡ ed5cca09-5623-4aab-a909-e371b47e086a
+md"""
+A noun has a `pos` (as will every form), and `number`, `gender`, and `case`. Nothing else, but because we assigned default values to our `Morphology` struct, we don't need to specify anything else.
+"""
 
 # ╔═╡ 911f1494-ca73-4ac0-9e90-b228ffc6080e
 menin = Morphology(
@@ -127,6 +190,343 @@ menin = Morphology(
 	gender = MorphRecord(posTag = "f", short = "fem", long = "feminine"),
 	grammaticalCase = MorphRecord(posTag = "a", short = "acc", long = "accusative")
 )
+
+# ╔═╡ d1fc518d-b93d-4e88-b849-f778911808f3
+string(menin)
+
+# ╔═╡ 8dafac49-daa3-407a-9f2a-1c083a0bef9e
+posTag(menin) == "n-s---fa-"
+
+# ╔═╡ ebfed8d2-94c6-4865-889f-9b3e9239f0b4
+md"""
+## Parse POSTag
+"""
+
+# ╔═╡ 2dd0bb77-7e7d-4189-a7d2-674b221630c7
+md"""
+Accept a POSTag; split it; treat each of the nine parts.
+"""
+
+# ╔═╡ 062b19c9-4dcd-4784-bbd1-18df5de5a330
+begin
+function getPos(s::String)
+	posDict = Dict(
+		# Part of Speech
+		"l" => MorphRecord("l", "art", "article", "urn:cite2:fuGreekMorph:pos.2022:article"),
+		"n" => MorphRecord("n", "noun", "noun", "urn:cite2:fuGreekMorph:pos.2022:noun"),
+		"a" => MorphRecord("a", "adj", "adjective", "urn:cite2:fuGreekMorph:pos.2022:adjective"),
+		"p" => MorphRecord("p", "pron", "pronoun", "urn:cite2:fuGreekMorph:pos.2022:pronoun"),
+		"v" => MorphRecord("v", "vb", "verb", "urn:cite2:fuGreekMorph:pos.2022:verb"),
+		"d" => MorphRecord("d", "adv", "adverb", "urn:cite2:fuGreekMorph:pos.2022:adverb"),
+		"r" => MorphRecord("r", "prep", "preposition", "urn:cite2:fuGreekMorph:pos.2022:preposition"),
+		"c" => MorphRecord("c", "conj", "conjunction", "urn:cite2:fuGreekMorph:pos.2022:conjunction"),
+		"i" => MorphRecord("i", "inter", "interjection", "urn:cite2:fuGreekMorph:pos.2022:interjection"),
+		"u" => MorphRecord("u", "punc", "punctuation", "urn:cite2:fuGreekMorph:pos.2022:punctuation"),
+		"g" => MorphRecord("g", "partic", "particle", "urn:cite2:fuGreekMorph:pos.2022:particle"),
+		"x" => MorphRecord("x", "irr", "irregular", "urn:cite2:fuGreekMorph:pos.2022:irregular"),
+		"-" => emptyMorphRecord
+	)
+
+	try 
+		if (s in keys(posDict)) 
+			posDict[s]
+		else 
+			println(""" "$s" is not a valid value. The valid values are $(keys(posDict)).""")
+		end
+	catch e
+		println(e)
+	end
+	
+end
+
+function getPerson(s::String)
+	posDict = Dict(
+		# Person
+		"1" => MorphRecord("1", "1st", "1st person", "urn:cite2:fuGreekMorph:person.2022:1"),
+		"2" => MorphRecord("2", "2nd", "2nd person", "urn:cite2:fuGreekMorph:person.2022:2"),
+		"3" => MorphRecord("3", "3rd", "3rd person", "urn:cite2:fuGreekMorph:person.2022:3"),
+		"-" => emptyMorphRecord
+	)
+
+	try 
+		if (s in keys(posDict)) 
+			posDict[s]
+		else 
+			println(""" "$s" is not a valid value. The valid values are $(keys(posDict)).""")
+		end
+	catch e
+		println(e)
+	end
+	
+end
+
+function getNumber(s::String)
+	posDict = Dict(
+		# Number
+		"s" => MorphRecord("s", "sing", "singular", "urn:cite2:fuGreekMorph:number.2022:singular"),
+		"d" => MorphRecord("d", "dl", "dual", "urn:cite2:fuGreekMorph:number.2022:plural"),
+		"p" => MorphRecord("p", "pl", "plural", "urn:cite2:fuGreekMorph:number.2022:dual"),
+		"-" => emptyMorphRecord
+	)
+
+	try 
+		if (s in keys(posDict)) 
+			posDict[s]
+		else 
+			println(""" "$s" is not a valid value. The valid values are $(keys(posDict)).""")
+		end
+	catch e
+		println(e)
+	end
+	
+end
+
+function getVoice(s::String)
+	posDict = Dict(
+		# Voice
+		"a" => MorphRecord("a", "act", "active", "urn:cite2:fuGreekMorph:voice.2022:active"),
+		"m" => MorphRecord("m", "mid", "middle", "urn:cite2:fuGreekMorph:voice.2022:middle"),
+		"p" => MorphRecord("p", "pass", "passive", "urn:cite2:fuGreekMorph:voice.2022:passive"),
+		"e" => MorphRecord("e", "m/p", "medio-passive", "urn:cite2:fuGreekMorph:voice.2022:mediopassive"),
+		"d" => MorphRecord("d", "dep", "deponent", "urn:cite2:fuGreekMorph:voice.2022:deponent"),
+		"-" => emptyMorphRecord
+	)
+
+	try 
+		if (s in keys(posDict)) 
+			posDict[s]
+		else 
+			println(""" "$s" is not a valid value. The valid values are $(keys(posDict)).""")
+		end
+	catch e
+		println(e)
+	end
+	
+end
+
+function getMood(s::String)
+	posDict = Dict(
+		# Mood
+		"i" => MorphRecord("i", "indic", "indicative", "urn:cite2:fuGreekMorph:mood.2022:indicative"),
+		"s" => MorphRecord("s", "subj", "subjunctive", "urn:cite2:fuGreekMorph:mood.2022:subjunctive"),
+		"n" => MorphRecord("n", "inf", "infinitive", "urn:cite2:fuGreekMorph:mood.2022:infinitive"),
+		"m" => MorphRecord("m", "imp", "imperative", "urn:cite2:fuGreekMorph:mood.2022:imperative"),
+		"p" => MorphRecord("p", "part", "participle", "urn:cite2:fuGreekMorph:mood.2022:participle"),
+		"o" => MorphRecord("o", "opt", "optative", "urn:cite2:fuGreekMorph:mood.2022:optative"),
+		"-" => emptyMorphRecord
+	)
+
+	try 
+		if (s in keys(posDict)) 
+			posDict[s]
+		else 
+			println(""" "$s" is not a valid value. The valid values are $(keys(posDict)).""")
+		end
+	catch e
+		println(e)
+	end
+	
+end
+
+function getTense(s::String)
+	posDict = Dict(
+		# Tense
+		"p" => MorphRecord("p", "pres", "present", "urn:cite2:fuGreekMorph:tense.2022:present"),
+		"i" => MorphRecord("i", "imperf", "imperfect", "urn:cite2:fuGreekMorph:tense.2022:imperfect"),
+		"e" => MorphRecord("r", "perf", "perfect", "urn:cite2:fuGreekMorph:tense.2022:perfect"),
+		"l" => MorphRecord("l", "plupf", "pluperfect", "urn:cite2:fuGreekMorph:tense.2022:pluperfect"),
+		"t" => MorphRecord("t", "futpf", "future perfect", "urn:cite2:fuGreekMorph:tense.2022:futureperfect"),
+		"f" => MorphRecord("f", "fut", "future", "urn:cite2:fuGreekMorph:tense.2022:future"),
+		"a" => MorphRecord("a", "aor", "aorist", "urn:cite2:fuGreekMorph:tense.2022:aorist"),
+		"-" => emptyMorphRecord
+	)
+
+	try 
+		if (s in keys(posDict)) 
+			posDict[s]
+		else 
+			println(""" "$s" is not a valid value. The valid values are $(keys(posDict)).""")
+		end
+	catch e
+		println(e)
+	end
+	
+end
+
+function getGender(s::String)
+	posDict = Dict(
+		# Gender
+		"m" => MorphRecord("m", "masc", "masculine", "urn:cite2:fuGreekMorph:gender.2022:masculine"),
+		"f" => MorphRecord("f", "fem", "feminine", "urn:cite2:fuGreekMorph:gender.2022:feminine"),
+		"n" => MorphRecord("n", "neu", "neuter", "urn:cite2:fuGreekMorph:gender.2022:neuter"),
+		"-" => emptyMorphRecord
+	)
+
+	try 
+		if (s in keys(posDict)) 
+			posDict[s]
+		else 
+			println(""" "$s" is not a valid value. The valid values are $(keys(posDict)).""")
+		end
+	catch e
+		println(e)
+	end
+	
+end
+
+function getCase(s::String)
+	posDict = Dict(
+		# Case
+		"n" => MorphRecord("n", "nom", "nominative", "urn:cite2:fuGreekMorph:case.2022:nominative"),
+		"g" => MorphRecord("g", "gen", "genitive", "urn:cite2:fuGreekMorph:case.2022:genitive"),
+		"d" => MorphRecord("d", "dat", "dative", "urn:cite2:fuGreekMorph:case.2022:dative"),
+		"a" => MorphRecord("a", "acc", "accusative", "urn:cite2:fuGreekMorph:case.2022:accusative"),
+		"v" => MorphRecord("v", "voc", "vocative", "urn:cite2:fuGreekMorph:case.2022:vocative"),
+		"l" => MorphRecord("l", "loc", "locative", "urn:cite2:fuGreekMorph:case.2022:locative"),
+		"-" => emptyMorphRecord
+	)
+
+	try 
+		if (s in keys(posDict)) 
+			posDict[s]
+		else 
+			println(""" "$s" is not a valid value. The valid values are $(keys(posDict)).""")
+		end
+	catch e
+		println(e)
+	end
+	
+end
+
+function getDegree(s::String)
+	posDict = Dict(
+		# Degree
+		"p" => MorphRecord("p", "pos", "positive", "urn:cite2:fuGreekMorph:degree.2022:positive"),
+		"c" => MorphRecord("c", "comp", "comparative", "urn:cite2:fuGreekMorph:degree.2022:comparative"),
+		"s" => MorphRecord("s", "sup", "superlative", "urn:cite2:fuGreekMorph:degree.2022:superlative"),
+		"-" => emptyMorphRecord
+	)
+
+	try 
+		if (s in keys(posDict)) 
+			posDict[s]
+		else 
+			println(""" "$s" is not a valid value. The valid values are $(keys(posDict)).""")
+		end
+	catch e
+		println(e)
+	end
+	
+end
+
+end
+
+
+# ╔═╡ da1c838b-510f-4c9e-8d11-1a6574ab3c3b
+function getMorphology(pt::String)
+	try
+
+		ptArray = map( c -> string(c), split(pt, ""))
+
+		
+		Morphology(
+			getPos(ptArray[posNum]),
+			getPerson(ptArray[personNum]),
+			getNumber(ptArray[numberNum]),
+			getVoice(ptArray[voiceNum]),
+			getMood(ptArray[moodNum]),
+			getTense(ptArray[tenseNum]),
+			getGender(ptArray[genderNum]),
+			getCase(ptArray[caseNum]),
+			getDegree(ptArray[degreeNum])
+		)
+		
+		
+			
+	catch e
+		println(e)
+		# println(""" "$pt" must have 9 characters; it has $(length(pt)) characters.""")
+	end
+
+	
+end
+
+# ╔═╡ 92650cb0-447f-4669-900d-e9e298e8daa6
+
+
+# ╔═╡ fbc8bc36-c4fb-472a-8156-14c275622f94
+md"""
+We need a selection of POSTags to work with. We'll take them from the first lines of the *Iliad*.
+"""
+
+# ╔═╡ e34bf2d0-0f83-4dbc-b14a-87ae9ae47497
+begin
+	pt1 = "n-s---fa-" # μῆνιν
+	pt2 = "v2spma---" # ἄειδε
+	pt3 = "n-s---fv-" # θεὰ
+	pt4 = "a-s---fa-" # οὐλομένην
+	pt5 = "u--------" # ',' (comma)
+	pt6 = "v3siie---" # ἐτελείετο
+	pt7 = "a-s---mnc" # σαώτερος
+	pt8 = "v-sappmn-" # χολωθεὶς
+	pt9 = "v3saia---" # ὄρσε
+	pt10 = "v-sfpmmn-" # λυσόμενός
+	pt11 = "g--------" # τε
+	pt12 = "p-s---mg-" # οὗ 
+end
+
+# ╔═╡ e7a0413c-8eae-4df8-b67b-3742a1c3d3ab
+# "n-s---fa-" # μῆνιν
+string(getMorphology(pt1))
+
+# ╔═╡ 3c43456d-3db2-472a-9685-cabc0b704701
+# "v2spma---" # ἄειδε
+string(getMorphology(pt2))
+
+# ╔═╡ 88c31b4a-5197-40ef-95c7-e428796794b8
+# "n-s---fv-" # θεὰ
+string(getMorphology(pt3))
+
+# ╔═╡ 96c14b07-a54b-4651-b554-225cada43ccb
+# "a-s---fa-" # οὐλομένην
+string(getMorphology(pt4))
+
+# ╔═╡ 9bed6a4a-8714-46a1-94c9-8afccae03c58
+# "u--------" # ',' (comma)
+string(getMorphology(pt5))
+
+# ╔═╡ 878bc6d4-02bc-4205-a6fe-92eb19264929
+# "v3siie---" # ἐτελείετο
+string(getMorphology(pt6))
+
+# ╔═╡ dfc7f862-09af-41dc-a8f2-8c0724dc0056
+# "a-s---mnc" # σαώτερος
+string(getMorphology(pt7))
+
+# ╔═╡ 5d292d9c-3543-45be-a81a-928aa565717f
+# "v-sappmn-" # χολωθεὶς
+string(getMorphology(pt8))
+
+# ╔═╡ 2d175536-4fde-41ce-9645-33418d7ebc8f
+# "v3saia---" # ὄρσε
+string(getMorphology(pt9))
+
+# ╔═╡ d7fbfa7e-69d8-4145-8f22-53c1bf3b3762
+# "v-sfpmmn-" # λυσόμενός
+string(getMorphology(pt10))
+
+# ╔═╡ c6bec211-a726-4b14-b560-950566715a0b
+# "g--------" # τε
+string(getMorphology(pt11))
+
+# ╔═╡ c92d5c39-2d8a-411e-8d2c-0cd36548c80b
+# pt12 = "p-s---mg-" # οὗ
+string(getMorphology(pt12))
+
+# ╔═╡ ccdfcd41-4c13-4d2d-9ad5-856c7d8f6ecc
+md"""
+### Sandbox Below
+"""
 
 # ╔═╡ 425e219d-4af5-42c5-8348-7b59c73d529c
 testMR = MorphRecord(posTag = "v", short = "vb", long = "verb")
@@ -178,7 +578,19 @@ tm
 emptyMorphRecord
 
 # ╔═╡ 7baac659-e0eb-4d51-bdb3-34eaf42d7542
+numDict = Dict(
 
+	"s" => MorphRecord("s", "sing", "singular", ""),
+	"d" => MorphRecord("d", "dl", "dual", ""),
+	"p" => MorphRecord("p", "pl", "plural", "")
+	
+)
+
+# ╔═╡ 53adbe51-0098-443a-8166-fcd0bc5866dd
+split(pt1, "")[voiceNum] |> string
+
+# ╔═╡ 56ff0ab9-c909-4012-ac72-99a04476c592
+Cite2Urn("urn:cite2:fuGreekMorph:pos.2022:article")
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -737,9 +1149,37 @@ version = "17.4.0+0"
 # ╠═d9d5abfa-ece4-461d-afc2-9eed0be6ca11
 # ╟─a5f682d3-310a-450f-b9d1-bec8e10ab1f9
 # ╠═f308d263-7659-42ef-8f0d-5fff3eb7f46f
+# ╟─6f551698-630e-4145-ac9e-4ef4f01872ad
+# ╟─92844bb9-7a2e-4e43-920c-942ec9ccede8
 # ╠═701abf20-ca37-443c-99e6-6b06368fc8db
-# ╠═7c324144-b406-45e0-9cb4-288b7f46ab05
+# ╠═4d5bd156-1c82-4be2-bbff-06a82a03b9d2
+# ╠═708af3d9-64fd-440c-9e21-68b11bccb6e2
+# ╠═e469bce0-ee49-4d90-9ea1-3c4038d5a45b
+# ╟─7c324144-b406-45e0-9cb4-288b7f46ab05
+# ╟─ed5cca09-5623-4aab-a909-e371b47e086a
 # ╠═911f1494-ca73-4ac0-9e90-b228ffc6080e
+# ╠═d1fc518d-b93d-4e88-b849-f778911808f3
+# ╠═8dafac49-daa3-407a-9f2a-1c083a0bef9e
+# ╟─ebfed8d2-94c6-4865-889f-9b3e9239f0b4
+# ╟─2dd0bb77-7e7d-4189-a7d2-674b221630c7
+# ╠═da1c838b-510f-4c9e-8d11-1a6574ab3c3b
+# ╠═062b19c9-4dcd-4784-bbd1-18df5de5a330
+# ╠═92650cb0-447f-4669-900d-e9e298e8daa6
+# ╟─fbc8bc36-c4fb-472a-8156-14c275622f94
+# ╠═e34bf2d0-0f83-4dbc-b14a-87ae9ae47497
+# ╠═e7a0413c-8eae-4df8-b67b-3742a1c3d3ab
+# ╠═3c43456d-3db2-472a-9685-cabc0b704701
+# ╠═88c31b4a-5197-40ef-95c7-e428796794b8
+# ╠═96c14b07-a54b-4651-b554-225cada43ccb
+# ╠═9bed6a4a-8714-46a1-94c9-8afccae03c58
+# ╠═878bc6d4-02bc-4205-a6fe-92eb19264929
+# ╠═dfc7f862-09af-41dc-a8f2-8c0724dc0056
+# ╠═5d292d9c-3543-45be-a81a-928aa565717f
+# ╠═2d175536-4fde-41ce-9645-33418d7ebc8f
+# ╠═d7fbfa7e-69d8-4145-8f22-53c1bf3b3762
+# ╠═c6bec211-a726-4b14-b560-950566715a0b
+# ╠═c92d5c39-2d8a-411e-8d2c-0cd36548c80b
+# ╟─ccdfcd41-4c13-4d2d-9ad5-856c7d8f6ecc
 # ╠═425e219d-4af5-42c5-8348-7b59c73d529c
 # ╠═cdf12645-000e-4dab-a757-18187c27c3f2
 # ╠═9ef914d1-9a8f-4365-98ea-2fdae5fec819
@@ -753,5 +1193,7 @@ version = "17.4.0+0"
 # ╠═a482360e-19b3-4669-a062-9a17ec3ccfb6
 # ╠═5f2f04f2-ae74-4b62-ac4c-fdb9e039587d
 # ╠═7baac659-e0eb-4d51-bdb3-34eaf42d7542
+# ╠═53adbe51-0098-443a-8166-fcd0bc5866dd
+# ╠═56ff0ab9-c909-4012-ac72-99a04476c592
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
