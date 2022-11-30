@@ -20,19 +20,30 @@ end
 md"""#### Set up and do a little testing on loading an XML Syntax file"""
 
 # ╔═╡ e9c18ab6-a578-419e-a4ee-cd580e462190
+# ╠═╡ disabled = true
+#=╠═╡
 iliadTBString = read("treebanks/iliad_all.xml", String)
+  ╠═╡ =#
 
 # ╔═╡ d622a77c-e757-4fc6-ae9f-8bcede5a8b79
+#=╠═╡
 iliadXML = parsexml(iliadTBString)
+  ╠═╡ =#
 
 # ╔═╡ ec72dfd6-21dc-488d-8e07-3fdaec0fc71e
+#=╠═╡
 tbRoot = root(iliadXML)
+  ╠═╡ =#
 
 # ╔═╡ 8c53f66d-b34b-40ab-a018-c5e8f060c1b3
+#=╠═╡
 iliadSents = findall("//sentence", iliadXML)
+  ╠═╡ =#
 
 # ╔═╡ 4ae34040-4461-4449-aebc-7fd19a31075d
+#=╠═╡
 println(length(iliadSents))
+  ╠═╡ =#
 
 # ╔═╡ 01d07b3d-913d-4e17-86c2-a674c37075d3
 md"""#### We create a basic `struct` to hold the versions of a pos-element we want"""
@@ -171,9 +182,6 @@ begin
 	end
 	
 end
-
-# ╔═╡ e469bce0-ee49-4d90-9ea1-3c4038d5a45b
-join(["a", "b", "c", "d"], ", ")
 
 # ╔═╡ 7c324144-b406-45e0-9cb4-288b7f46ab05
 md"""### Let's test our Struct!"""
@@ -1154,7 +1162,6 @@ version = "17.4.0+0"
 # ╠═701abf20-ca37-443c-99e6-6b06368fc8db
 # ╠═4d5bd156-1c82-4be2-bbff-06a82a03b9d2
 # ╠═708af3d9-64fd-440c-9e21-68b11bccb6e2
-# ╠═e469bce0-ee49-4d90-9ea1-3c4038d5a45b
 # ╟─7c324144-b406-45e0-9cb4-288b7f46ab05
 # ╟─ed5cca09-5623-4aab-a909-e371b47e086a
 # ╠═911f1494-ca73-4ac0-9e90-b228ffc6080e
